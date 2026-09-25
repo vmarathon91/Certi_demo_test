@@ -1,7 +1,7 @@
 {
   "$schema": "https://marathon-api/v1/race-definition.json",
   "version": "1.0",
-  "exportedAt": "2026-09-25T08:37:29.244Z",
+  "exportedAt": "2026-09-25T10:16:47.876Z",
   "instructions": "Ném file .json này vào thư mục \"public/races/\" trong mã nguồn dự án. Hệ thống sẽ tự động đọc và tạo giải mới.",
   "id": "vnexpress-marathon-grand-tour-nghe-an-2026",
   "slug": "vnexpress-marathon-grand-tour-nghe-an-2026",
@@ -21,6 +21,7 @@
   "storageKeyPrefix": "vm_vnexpressmarathongrandtournghean2026",
   "appsScriptUrl": "https://script.google.com/macros/s/AKfycbwwY2MgGaURMrB20UHGVvUZ3INSOrkd8jIQok1JpnDTWMzblecdDOdDTn7qtrbtPPzquw/exec",
   "photosScriptUrl": "https://script.google.com/macros/s/AKfycbyUr1QYj9Eyp60HaDLhXJINbr8Yozt3TXMRlPHpJ7QWhpkK6D4D_ZGMhW5dUerljLT3/exec",
+  "checkingScriptUrl": "https://script.google.com/macros/s/AKfycbycDYjQwUGhF_OmEm-nledEXPUdxGiTYZFuwpnyGFvYYsDevZlDRx4fvnSHbwdLpfJG/exec",
   "description": "Tra cứu kết quả & Chứng nhận điện tử VnExpress Marathon Grand Tour Nghe An 2026",
   "placements": {
     "name": {
