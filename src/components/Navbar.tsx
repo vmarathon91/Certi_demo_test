@@ -119,7 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeRace, onSelectRace, logoUr
           </div>
         </div>
 
-        {/* Right side: Race Switcher or Single Race Badge */}
+        {/* Right side: Race Switcher (only when multiple races exist) */}
         {availableRaces.length > 1 ? (
           <div className="relative shrink-0" ref={dropdownRef}>
             <button
@@ -195,15 +195,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeRace, onSelectRace, logoUr
               </div>
             )}
           </div>
-        ) : (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200/80 text-[#9F224E] text-xs font-semibold shadow-2xs">
-            <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="font-bold">{activeRace.shortName}</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-100 text-[#9F224E] border border-rose-300/50">
-              {activeRace.code}
-            </span>
-          </div>
-        )}
+        ) : null}
       </div>
     </header>
   );
