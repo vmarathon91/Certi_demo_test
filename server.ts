@@ -754,7 +754,8 @@ async function startServer() {
     }
 
     const cacheKey = targetUrl;
-    const cached = sheetDataCache.get(cacheKey);
+    const baseUrl = targetUrl.split('?')[0];
+    const cached = sheetDataCache.get(cacheKey) || sheetDataCache.get(baseUrl);
 
     // Return fresh cached data if available and not forced
     if (!forceRefresh && cached && Date.now() - cached.timestamp < SHEET_CACHE_TTL) {
@@ -767,7 +768,8 @@ async function startServer() {
     // Helper to fetch with timeout and follow redirects
     async function doFetch(attempt = 1): Promise<Response> {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      // 60-second timeout for Google Apps Script cold starts & large spreadsheets
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
       try {
         const resp = await fetch(targetUrl, {
           signal: controller.signal,
@@ -787,7 +789,7 @@ async function startServer() {
       } catch (err) {
         clearTimeout(timeoutId);
         if (attempt < 2) {
-          await new Promise((r) => setTimeout(r, 1200));
+          await new Promise((r) => setTimeout(r, 1500));
           return doFetch(attempt + 1);
         }
         throw err;
@@ -812,8 +814,13 @@ async function startServer() {
       }
 
       if (isJson && parsedJson) {
-        // Cache the successful JSON response
+        // Cache the successful JSON response under both full key and base URL
         sheetDataCache.set(cacheKey, {
+          data: parsedJson,
+          isJson: true,
+          timestamp: Date.now(),
+        });
+        sheetDataCache.set(baseUrl, {
           data: parsedJson,
           isJson: true,
           timestamp: Date.now(),
@@ -828,18 +835,25 @@ async function startServer() {
         isJson: false,
         timestamp: Date.now(),
       });
+      sheetDataCache.set(baseUrl, {
+        data: null,
+        rawText: text,
+        isJson: false,
+        timestamp: Date.now(),
+      });
       return res.send(text);
     } catch (err: any) {
       console.warn(`[Proxy Sheet] Fetch failed for ${targetUrl}:`, err.message);
       // Fallback: If we have ANY stale cache in memory, serve it to avoid breaking user experience!
-      if (cached) {
-        console.info(`[Proxy Sheet] Serving stale cache for ${targetUrl} due to upstream fetch failure`);
-        if (cached.isJson) {
-          return res.json({ ...cached.data, _stale: true });
+      const fallbackCached = cached || Array.from(sheetDataCache.values())[0];
+      if (fallbackCached) {
+        console.info(`[Proxy Sheet] Serving fallback cache for ${targetUrl} due to upstream fetch failure`);
+        if (fallbackCached.isJson) {
+          return res.json({ ...fallbackCached.data, _stale: true, warning: 'Sử dụng dữ liệu đệm do Apps Script phản hồi quá lâu' });
         }
-        return res.send(cached.rawText);
+        return res.send(fallbackCached.rawText);
       }
-      return res.status(500).json({ error: err.message || 'Không thể kết nối đến nguồn dữ liệu lúc này' });
+      return res.status(504).json({ error: 'Google Apps Script phản hồi quá lâu (> 60s). Vui lòng cập nhật code tối ưu hoặc thử lại sau.' });
     }
   });
 

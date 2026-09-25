@@ -24,6 +24,7 @@ import {
   getDirectGoogleDriveImageUrl,
   getCachedRunners,
 } from './services/sheetService';
+import { DevDataBenchmarkBox } from './components/DevDataBenchmarkBox';
 import { AlertCircle } from 'lucide-react';
 
 const DEFAULT_CONFIG: CertificateConfig = {
@@ -370,23 +371,38 @@ export default function App() {
 
   if (isAdminRoute) {
     return (
-      <AdminPlacementStudio
-        runners={runners}
-        activeRace={activeRace}
-        allRaces={allRaces}
-        onSelectRace={handleSelectRace}
-        onRefreshRaces={refreshRacesList}
-        onBackToUserView={() => {
-          window.history.pushState({}, '', `/${activeRace.slug}`);
-          setIsAdminRoute(false);
-        }}
-        onNavigateToRace={(slug) => {
-          const found = allRaces.find((r) => r.slug === slug);
-          if (found) setActiveRace(found);
-          window.history.pushState({}, '', `/${slug}`);
-          setIsAdminRoute(false);
-        }}
-      />
+      <>
+        <AdminPlacementStudio
+          runners={runners}
+          activeRace={activeRace}
+          allRaces={allRaces}
+          onSelectRace={handleSelectRace}
+          onRefreshRaces={refreshRacesList}
+          onBackToUserView={() => {
+            window.history.pushState({}, '', `/${activeRace.slug}`);
+            setIsAdminRoute(false);
+          }}
+          onNavigateToRace={(slug) => {
+            const found = allRaces.find((r) => r.slug === slug);
+            if (found) setActiveRace(found);
+            window.history.pushState({}, '', `/${slug}`);
+            setIsAdminRoute(false);
+          }}
+        />
+
+        {/* Box Test Benchmark Refresh Data - Hoạt động cả trong /admin */}
+        <DevDataBenchmarkBox
+          activeRace={activeRace}
+          dataSourceSettings={dataSourceSettings}
+          selectedRunner={selectedRunner}
+          runnersCount={runners.length}
+          onRunnersUpdated={(newRunners) => {
+            setRunners(newRunners);
+          }}
+          onConfigUpdated={setConfig}
+          onLogoUpdated={setLogoUrl}
+        />
+      </>
     );
   }
 
