@@ -24,6 +24,7 @@ export interface Race {
   demoRacePhotos?: Record<string, string[]>; // Mảng nhiều ảnh thi đấu cho mỗi BIB
   appsScriptUrl?: string;
   photosScriptUrl?: string; // Link Google Apps Script Web App lấy dữ liệu ảnh từ Google Sheet (Cột BIB & IMG)
+  checkingScriptUrl?: string; // Link Google Apps Script Web App ghi log tải ảnh HD (Sheet CHECKING)
   description: string;
   placements?: CertificatePlacements;
 }
@@ -92,6 +93,7 @@ function getBundledRaces(): Race[] {
           storageKeyPrefix: data.storageKeyPrefix || `vm_${(data.slug || 'race').replace(/[^a-z0-9]/g, '')}`,
           appsScriptUrl: data.appsScriptUrl || '',
           photosScriptUrl: data.photosScriptUrl || '',
+          checkingScriptUrl: data.checkingScriptUrl || '',
           description: data.description || '',
           placements: data.placements || undefined,
           initialRunners: data.initialRunners || fallbackList,

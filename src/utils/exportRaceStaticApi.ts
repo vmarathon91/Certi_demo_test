@@ -25,6 +25,7 @@ export interface StaticRaceApiDefinition {
   storageKeyPrefix?: string;
   appsScriptUrl?: string;
   photosScriptUrl?: string;
+  checkingScriptUrl?: string;
   description?: string;
   placements: CertificatePlacements;
   backgroundDataUrl?: string;
@@ -76,6 +77,7 @@ export function exportRaceStaticApi(
     storageKeyPrefix: race.storageKeyPrefix || `vm_${cleanSlug.replace(/[^a-z0-9]/g, '')}`,
     appsScriptUrl: race.appsScriptUrl || '',
     photosScriptUrl: race.photosScriptUrl || '',
+    checkingScriptUrl: race.checkingScriptUrl || '',
     description: race.description || `Tra cứu kết quả & Chứng nhận điện tử ${race.name}`,
     placements: activePlacements,
   };
@@ -143,6 +145,7 @@ export async function importRaceFromStaticApi(file: File): Promise<{
           storageKeyPrefix: item.storageKeyPrefix || `vm_${cleanSlug.replace(/[^a-z0-9]/g, '')}`,
           appsScriptUrl: item.appsScriptUrl || '',
           photosScriptUrl: item.photosScriptUrl || '',
+          checkingScriptUrl: item.checkingScriptUrl || '',
           description: item.description || '',
         };
 

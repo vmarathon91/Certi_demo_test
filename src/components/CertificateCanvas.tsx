@@ -43,6 +43,11 @@ import {
   getSavedPersonalPhoto,
   removeSavedPersonalPhoto,
 } from '../utils/imageStorage';
+import {
+  logCheckingDownload,
+  formatTimeSpentOnPage,
+  formatCurrentTimestamp,
+} from '../services/logService';
 const generatedBgUrl = '/NA26.png';
 
 // Default sample runner photo (Phùng Hữu Thanh: /1.jpg)
@@ -624,6 +629,29 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
+
+      // Record log for sheet CHECKING: TIMESTAMP, BIB, RACE, TIME
+      try {
+        const { formatted: timeFormatted } = formatTimeSpentOnPage();
+        const currentTimestamp = formatCurrentTimestamp();
+        const targetRaceName = activeRace?.name || raceName || 'VnExpress Marathon';
+        const targetScriptUrl =
+          activeRace?.checkingScriptUrl ||
+          (typeof window !== 'undefined' ? localStorage.getItem('vm_checking_script_url') || '' : '') ||
+          activeRace?.appsScriptUrl;
+
+        logCheckingDownload({
+          timestamp: currentTimestamp,
+          bib: runner.bib,
+          race: targetRaceName,
+          time: timeFormatted,
+          scriptUrl: targetScriptUrl,
+        }).catch((err) => {
+          console.warn('[Log Checking] Warning:', err);
+        });
+      } catch (logErr) {
+        console.warn('[Log Checking] Error capturing metrics:', logErr);
+      }
 
       const certW = customImgRef.current?.naturalWidth || 1080;
       const certH = customImgRef.current?.naturalHeight || 2400;

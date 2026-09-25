@@ -10,6 +10,7 @@ export interface CreateRacePayload {
   defaultBgUrl: string;
   appsScriptUrl?: string;
   photosScriptUrl?: string;
+  checkingScriptUrl?: string;
   city?: string;
   province?: string;
   date?: string;

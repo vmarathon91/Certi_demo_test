@@ -5,6 +5,7 @@ import { exportRaceStaticApi, importRaceFromStaticApi } from '../utils/exportRac
 import { DEFAULT_NGHE_AN_PLACEMENTS } from '../data/certificatePlacements';
 import { testScriptConnection } from '../data/raceStorage';
 import { GOOGLE_APPS_SCRIPT_PHOTOS_CODE } from '../services/racePhotoService';
+import { GOOGLE_APPS_SCRIPT_CHECKING_CODE } from '../services/logService';
 import {
   Plus,
   Trophy,
@@ -61,6 +62,7 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
   const [formBgDataUrl, setFormBgDataUrl] = useState<string | null>(null);
   const [formScriptUrl, setFormScriptUrl] = useState('');
   const [formPhotosScriptUrl, setFormPhotosScriptUrl] = useState('');
+  const [formCheckingScriptUrl, setFormCheckingScriptUrl] = useState('');
   const [formDate, setFormDate] = useState('2026');
   const [formLocation, setFormLocation] = useState('');
   const [formPlacements, setFormPlacements] = useState<CertificatePlacements>(
@@ -75,6 +77,15 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
   const [photosScriptTestResult, setPhotosScriptTestResult] = useState<{
     success: boolean;
     count?: number;
+    message: string;
+  } | null>(null);
+
+  // Modal for Viewing Google Apps Script Code for CHECKING Logs
+  const [showCheckingScriptModal, setShowCheckingScriptModal] = useState(false);
+  const [copiedCheckingScript, setCopiedCheckingScript] = useState(false);
+  const [isTestingCheckingScript, setIsTestingCheckingScript] = useState(false);
+  const [checkingScriptTestResult, setCheckingScriptTestResult] = useState<{
+    success: boolean;
     message: string;
   } | null>(null);
 
@@ -122,6 +133,7 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
     setFormBgDataUrl(null);
     setFormScriptUrl('');
     setFormPhotosScriptUrl('');
+    setFormCheckingScriptUrl('');
     setFormDate('2026');
     setFormLocation('');
     setFormPlacements(currentPlacements || DEFAULT_NGHE_AN_PLACEMENTS);
@@ -130,6 +142,7 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
     setSavedRaceForExport(null);
     setScriptTestResult(null);
     setPhotosScriptTestResult(null);
+    setCheckingScriptTestResult(null);
     setIsModalOpen(true);
   };
 
@@ -142,6 +155,7 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
     setFormBgDataUrl(null);
     setFormScriptUrl(race.appsScriptUrl || '');
     setFormPhotosScriptUrl(race.photosScriptUrl || '');
+    setFormCheckingScriptUrl(race.checkingScriptUrl || '');
     setFormDate(race.date || '2026');
     setFormLocation(race.locationFull || '');
     setFormPlacements(race.placements || currentPlacements || DEFAULT_NGHE_AN_PLACEMENTS);
@@ -150,6 +164,7 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
     setSavedRaceForExport(null);
     setScriptTestResult(null);
     setPhotosScriptTestResult(null);
+    setCheckingScriptTestResult(null);
     setIsModalOpen(true);
   };
 
@@ -359,6 +374,56 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
     }
   };
 
+  // Test Checking Script Connection (Sheet CHECKING)
+  const handleTestCheckingScript = async () => {
+    const scriptUrl = formCheckingScriptUrl.trim();
+    if (!scriptUrl) {
+      setCheckingScriptTestResult({
+        success: false,
+        message: 'Vui lòng nhập đường link Google Apps Script cho sheet CHECKING trước khi kiểm tra.',
+      });
+      return;
+    }
+
+    setIsTestingCheckingScript(true);
+    setCheckingScriptTestResult(null);
+
+    try {
+      const resp = await fetch('/api/log-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'checking',
+          timestamp: new Date().toISOString(),
+          bib: 'TEST_99999',
+          race: formName.trim() || 'VnExpress Marathon Test',
+          time: '10s (Test)',
+          scriptUrl,
+        }),
+      });
+
+      const data = await resp.json();
+      if (resp.ok && data.success !== false) {
+        setCheckingScriptTestResult({
+          success: true,
+          message: '✅ Kết nối thành công! Đã gửi thành công dòng log mẫu [TIMESTAMP, BIB, RACE, TIME] vào tab "CHECKING".',
+        });
+      } else {
+        setCheckingScriptTestResult({
+          success: false,
+          message: `Lỗi ghi log: ${data.error || 'Google Apps Script trả về lỗi hoặc chưa bật quyền Anyone'}`,
+        });
+      }
+    } catch (err: any) {
+      setCheckingScriptTestResult({
+        success: false,
+        message: `Lỗi kết nối: ${err.message || 'Không thể gửi dữ liệu'}`,
+      });
+    } finally {
+      setIsTestingCheckingScript(false);
+    }
+  };
+
   // Save race
   const handleSubmitRace = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -386,6 +451,7 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
         defaultBgUrl: formBgUrl,
         appsScriptUrl: formScriptUrl.trim(),
         photosScriptUrl: formPhotosScriptUrl.trim(),
+        checkingScriptUrl: formCheckingScriptUrl.trim(),
         date: formDate.trim() || '2026',
         locationFull: formLocation.trim() || 'Việt Nam',
         placements: editingRace?.placements || currentPlacements,
@@ -644,6 +710,11 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
                       <span className="text-stone-500 italic">Dùng script mặc định hệ thống</span>
                     )}
                   </div>
+                  {race.checkingScriptUrl && (
+                    <div className="text-[10px] font-mono text-amber-400 pt-0.5 border-t border-stone-800/80 truncate">
+                      ✓ Script Log CHECKING: Đã cấu hình
+                    </div>
+                  )}
                 </div>
 
                 {/* 3. Action Buttons */}
@@ -1025,6 +1096,68 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
                 )}
               </div>
 
+              {/* 6/ Script Ghi Log Tải Ảnh (Sheet: CHECKING) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-stone-200">
+                    6/ Script Ghi Log Tải Ảnh HD (Sheet: CHECKING - 4 Cột: TIMESTAMP, BIB, RACE, TIME)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCheckingScriptModal(true)}
+                      className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Code2 className="w-3.5 h-3.5" />
+                      <span>Xem & Copy mã Script</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTestCheckingScript}
+                      disabled={isTestingCheckingScript || !formCheckingScriptUrl.trim()}
+                      className="text-xs text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      {isTestingCheckingScript ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      )}
+                      <span>Kiểm tra ghi log</span>
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={formCheckingScriptUrl}
+                  onChange={(e) => setFormCheckingScriptUrl(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/.../exec (Để trống sẽ dùng chung script giải hoặc mặc định)"
+                  className="w-full px-3.5 py-2.5 bg-stone-800 border border-stone-700 rounded-xl text-xs text-white placeholder-stone-500 font-mono focus:outline-none focus:border-teal-500"
+                />
+                <p className="text-[10px] text-stone-400 mt-1">
+                  Khi user bấm nút "Tải ảnh HD", hệ thống sẽ tự động lưu 4 thông tin: <strong>TIMESTAMP</strong> (thời gian click), <strong>BIB</strong> (số BIB), <strong>RACE</strong> (tên giải), <strong>TIME</strong> (thời gian vào trang đến lúc click) vào tab <strong>CHECKING</strong>.
+                </p>
+
+                {/* Checking script test result badge */}
+                {checkingScriptTestResult && (
+                  <div
+                    className={`mt-2 p-2.5 rounded-xl border text-xs flex items-start gap-2 ${
+                      checkingScriptTestResult.success
+                        ? 'bg-emerald-950/50 border-emerald-700 text-emerald-300'
+                        : 'bg-amber-950/50 border-amber-700 text-amber-300'
+                    }`}
+                  >
+                    {checkingScriptTestResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    )}
+                    <div>
+                      <p className="font-semibold">{checkingScriptTestResult.message}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Thông tin bổ sung */}
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div>
@@ -1148,6 +1281,87 @@ export const RaceManagerTab: React.FC<RaceManagerTabProps> = ({
               <button
                 type="button"
                 onClick={() => setShowScriptModal(false)}
+                className="px-5 py-2 bg-stone-800 hover:bg-stone-700 text-white font-semibold rounded-xl text-xs cursor-pointer"
+              >
+                Đã hiểu & Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: MÃ GOOGLE APPS SCRIPT CHO SHEET CHECKING (TIMESTAMP, BIB, RACE, TIME) */}
+      {showCheckingScriptModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-stone-900 border border-stone-700 rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl text-stone-100 my-8 space-y-4">
+            <div className="flex items-center justify-between border-b border-stone-800 pb-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400">
+                  <Code2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Mã Google Apps Script: Ghi Log Tải Ảnh (Sheet: CHECKING)
+                  </h3>
+                  <p className="text-stone-400 text-xs">
+                    Tự động ghi 4 trường: TIMESTAMP, BIB, RACE, TIME mỗi khi user bấm "Tải ảnh HD"
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCheckingScriptModal(false)}
+                className="p-2 text-stone-400 hover:text-white hover:bg-stone-800 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick 3-Step Guide */}
+            <div className="p-3.5 bg-stone-950/70 border border-stone-800 rounded-2xl text-xs space-y-1.5 text-stone-300">
+              <div className="font-bold text-teal-400 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Hướng dẫn cài đặt nhanh:</span>
+              </div>
+              <ol className="list-decimal list-inside space-y-1 text-stone-300 text-[11px] leading-relaxed">
+                <li>
+                  Mở Google Sheet của bạn (chứa hoặc sẽ tạo tab <strong>CHECKING</strong>).
+                </li>
+                <li>
+                  Vào menu <strong>Tiện ích mở rộng (Extensions)</strong> &gt; <strong>Apps Script</strong>, dán toàn bộ đoạn code bên dưới vào và bấm lưu (Ctrl+S).
+                </li>
+                <li>
+                  Bấm <strong>Triển khai (Deploy)</strong> &gt; <strong>Bản triển khai mới (New deployment)</strong> &gt; Chọn <strong>Ứng dụng web (Web App)</strong> &gt; Tại mục <i>Ai có quyền truy cập (Who has access)</i> chọn <strong>Bất kỳ ai (Anyone)</strong> &gt; Bấm Triển khai và copy đường link Web App dán vào hệ thống!
+                </li>
+              </ol>
+            </div>
+
+            {/* Code Box with Copy Button */}
+            <div className="relative">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-stone-800 rounded-t-xl border border-stone-700 border-b-0 text-[11px] text-stone-400 font-mono">
+                <span>Code.gs (Ghi log CHECKING)</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CHECKING_CODE);
+                    setCopiedCheckingScript(true);
+                    setTimeout(() => setCopiedCheckingScript(false), 3000);
+                  }}
+                  className="px-3 py-1 bg-teal-500 hover:bg-teal-400 text-stone-950 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  {copiedCheckingScript ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedCheckingScript ? 'Đã sao chép!' : 'Sao chép toàn bộ code'}</span>
+                </button>
+              </div>
+              <pre className="p-4 bg-stone-950 border border-stone-700 rounded-b-xl overflow-x-auto text-[11px] font-mono text-emerald-400 max-h-72 scrollbar-thin">
+                {GOOGLE_APPS_SCRIPT_CHECKING_CODE}
+              </pre>
+            </div>
+
+            <div className="flex items-center justify-end pt-2 border-t border-stone-800">
+              <button
+                type="button"
+                onClick={() => setShowCheckingScriptModal(false)}
                 className="px-5 py-2 bg-stone-800 hover:bg-stone-700 text-white font-semibold rounded-xl text-xs cursor-pointer"
               >
                 Đã hiểu & Đóng
