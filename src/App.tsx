@@ -83,14 +83,28 @@ export default function App() {
       : INITIAL_RUNNERS;
   });
   const [selectedRunner, setSelectedRunner] = useState<Runner>(() => {
-    const cached = getCachedRunners(activeRace.storageKeyPrefix);
-    if (cached && cached.length > 0) {
-      const first = cached[0];
-      const photo = getDemoPhoto(first.bib) || getDemoPhoto(first.name) || (activeRace.demoPhotos || DEMO_PHOTOS)[first.bib];
-      return photo ? { ...first, photoUrl: photo } : first;
+    const def =
+      (activeRace.demoRunners && activeRace.demoRunners[0]) ||
+      (activeRace.initialRunners && activeRace.initialRunners[0]) ||
+      DEMO_RUNNERS[0] ||
+      INITIAL_RUNNERS[0];
+
+    // Kiểm tra nếu trên URL có truyền tham số ?bib=
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const bibParam = urlParams.get('bib');
+      if (bibParam) {
+        const cached = getCachedRunners(activeRace.storageKeyPrefix);
+        const match = cached?.find((r) => r.bib.toLowerCase() === bibParam.toLowerCase());
+        if (match) {
+          const photo = getDemoPhoto(match.bib) || getDemoPhoto(match.name) || (activeRace.demoPhotos || DEMO_PHOTOS)[match.bib];
+          return photo ? { ...match, photoUrl: photo } : match;
+        }
+      }
     }
-    const def = (activeRace.initialRunners && activeRace.initialRunners[0]) || INITIAL_RUNNERS[0];
-    const photo = getDemoPhoto(def.bib) || getDemoPhoto(def.name);
+
+    // Mặc định luôn là VĐV mẫu đầu tiên (Phùng Hữu Thanh: 90110)
+    const photo = getDemoPhoto(def.bib) || getDemoPhoto(def.name) || (activeRace.demoPhotos || DEMO_PHOTOS)[def.bib] || def.photoUrl;
     return photo ? { ...def, photoUrl: photo } : def;
   });
   const [isLoadingRunners, setIsLoadingRunners] = useState<boolean>(false);
@@ -252,20 +266,22 @@ export default function App() {
           setSelectedRunner((current) => {
             const photoMap = targetRace.demoPhotos || DEMO_PHOTOS;
             if (!current) {
-              const first = res.runners[0];
-              const p = getDemoPhoto(first.bib) || getDemoPhoto(first.name) || photoMap[first.bib];
-              return p ? { ...first, photoUrl: p } : first;
+              const def =
+                (targetRace.demoRunners && targetRace.demoRunners[0]) ||
+                (targetRace.initialRunners && targetRace.initialRunners[0]) ||
+                DEMO_RUNNERS[0] ||
+                INITIAL_RUNNERS[0];
+              const p = getDemoPhoto(def.bib) || getDemoPhoto(def.name) || photoMap[def.bib] || def.photoUrl;
+              return p ? { ...def, photoUrl: p } : def;
             }
-            // Prioritize finding current runner in the freshly loaded runners
+            // Nếu VĐV hiện tại có trong danh sách vừa tải thì cập nhật số liệu mới nhất
             const found = res.runners.find((r) => r.bib.toLowerCase() === current.bib.toLowerCase());
             if (found) {
-              const p = getDemoPhoto(found.bib) || getDemoPhoto(found.name) || photoMap[found.bib];
+              const p = current.photoUrl || getDemoPhoto(found.bib) || getDemoPhoto(found.name) || photoMap[found.bib];
               return p ? { ...found, photoUrl: p } : found;
             }
-            // If current runner is not in the new sheet, switch to the first runner of the new sheet
-            const first = res.runners[0];
-            const p = getDemoPhoto(first.bib) || getDemoPhoto(first.name) || photoMap[first.bib];
-            return p ? { ...first, photoUrl: p } : first;
+            // Giữ nguyên VĐV mặc định đang chọn (Phùng Hữu Thanh), TUYỆT ĐỐI không tự động nhảy sang người đầu tiên của sheet
+            return current;
           });
         }
 
@@ -316,11 +332,14 @@ export default function App() {
     if (cached && cached.length > 0) {
       setRunners(cached);
       setSelectedRunner((current) => {
+        if (!current) return cached[0];
         const photoMap = activeRace.demoPhotos || DEMO_PHOTOS;
-        const found = cached.find((r) => r.bib.toLowerCase() === current?.bib?.toLowerCase());
-        const target = found || cached[0];
-        const p = getDemoPhoto(target.bib) || getDemoPhoto(target.name) || photoMap[target.bib];
-        return p ? { ...target, photoUrl: p } : target;
+        const found = cached.find((r) => r.bib.toLowerCase() === current.bib.toLowerCase());
+        if (found) {
+          const p = current.photoUrl || getDemoPhoto(found.bib) || getDemoPhoto(found.name) || photoMap[found.bib];
+          return p ? { ...found, photoUrl: p } : found;
+        }
+        return current;
       });
     }
 

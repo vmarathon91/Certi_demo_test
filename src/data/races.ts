@@ -63,7 +63,7 @@ export function ensureRaceRunners(race: Race): Race {
 }
 
 // Import all static race json definitions from public/races/ at compile time (100% Client-side compatible for Vercel/GitHub Pages)
-const staticRaceModules = import.meta.glob('/public/races/*.json', { eager: true });
+const staticRaceModules = import.meta.glob(['/public/races/*.json', '../../public/races/*.json'], { eager: true });
 
 function getBundledRaces(): Race[] {
   const list: Race[] = [];
